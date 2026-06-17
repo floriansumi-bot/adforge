@@ -1,0 +1,11 @@
+# Secrets — NEVER commit keys. They live only in the host's env vars.
+.env
+.env.*
+*.local.*
+
+# Tooling / OS
+.vercel
+node_modules/
+Thumbs.db
+Desktop.ini
+.DS_Store

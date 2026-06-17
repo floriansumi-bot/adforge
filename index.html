@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AdForge — Multi-Agent Ad Studio</title>
+  <meta name="description" content="An autonomous multi-agent ad-creative studio. A team of AI agents turns one idea into a brief, copy and editable visual scenes — powered by GLM + CogView on a free Z.ai key." />
+  <meta name="theme-color" content="#0b0d17" />
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="preconnect" href="https://api.z.ai" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">◆</span>
+      <div>
+        <h1>AdForge</h1>
+        <p class="tag">Multi-agent ad studio</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span id="brainBadge" class="badge" title="Which model the agents are using">Keyless</span>
+      <button id="howBtn" class="ghost-btn" type="button">How it works</button>
+      <button id="settingsBtn" class="ghost-btn" type="button" aria-label="Settings">⚙ Settings</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- COMPOSER -->
+    <section class="composer card">
+      <label class="field-label" for="idea">Your product or idea</label>
+      <textarea id="idea" rows="2" placeholder="e.g. A small-batch oat-milk brand for busy city mornings"></textarea>
+      <div id="examples" class="chips" aria-label="Examples"></div>
+
+      <div class="composer-grid">
+        <div>
+          <label class="field-label" for="audience">Audience <span class="muted">(optional)</span></label>
+          <input id="audience" type="text" placeholder="auto" />
+        </div>
+        <div>
+          <label class="field-label" for="tone">Tone <span class="muted">(optional)</span></label>
+          <input id="tone" type="text" placeholder="auto" />
+        </div>
+        <div>
+          <label class="field-label" for="platform">Platform</label>
+          <select id="platform">
+            <option value="general">General</option>
+            <option value="Instagram">Instagram</option>
+            <option value="Facebook">Facebook</option>
+            <option value="display banner">Display banner</option>
+            <option value="poster">Poster / OOH</option>
+            <option value="TikTok">TikTok</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="scenes">Scenes: <span id="scenesVal">4</span></label>
+          <input id="scenes" type="range" min="1" max="8" value="4" />
+        </div>
+      </div>
+
+      <button id="generateBtn" class="primary-btn" type="button">✨ Generate campaign</button>
+    </section>
+
+    <!-- AGENT PIPELINE -->
+    <section id="pipeline" class="pipeline" aria-label="Agent pipeline"></section>
+
+    <!-- CREATIVE DIRECTIONS (pick one) -->
+    <section id="conceptsSection" class="card hidden">
+      <div class="section-head">
+        <h2>Pick a creative direction</h2>
+        <span class="muted">Three directions from the Strategist — choose one to build the full campaign</span>
+      </div>
+      <div id="conceptsGrid" class="concepts-grid" aria-label="Creative directions"></div>
+    </section>
+
+    <!-- BRIEF + MASTER PROMPT -->
+    <section id="briefSection" class="card hidden">
+      <div class="section-head">
+        <h2>Creative brief</h2>
+        <span id="avgScore" class="score-pill hidden"></span>
+      </div>
+      <div id="brief" class="brief"></div>
+
+      <label class="field-label" for="masterPrompt">Master image prompt <span class="muted">(edit me, then regenerate)</span></label>
+      <textarea id="masterPrompt" rows="4"></textarea>
+      <div class="row-actions">
+        <button id="improveMasterBtn" class="ghost-btn" type="button">✦ Improve prompt</button>
+        <button id="regenAllBtn" class="ghost-btn" type="button">↻ Regenerate all scenes</button>
+        <button id="exportBtn" class="ghost-btn" type="button">⤓ Export campaign</button>
+      </div>
+    </section>
+
+    <!-- SCENES -->
+    <section id="scenesGrid" class="scenes-grid" aria-label="Scenes"></section>
+
+    <!-- VIDEO AD -->
+    <section id="videoSection" class="card hidden">
+      <div class="section-head">
+        <h2>🎬 Video ad</h2>
+        <span class="muted small">Animate the scenes into a video with an AI voiceover — built entirely in your browser.</span>
+      </div>
+      <div class="video-controls">
+        <div>
+          <label class="field-label" for="vFormat">Format</label>
+          <select id="vFormat">
+            <option value="square">Square 1:1</option>
+            <option value="landscape">Landscape 16:9</option>
+            <option value="portrait">Portrait 9:16</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="vEngine">Voiceover</label>
+          <select id="vEngine">
+            <option value="kokoro">In-browser + Kokoro voice (realistic, no server)</option>
+            <option value="none">In-browser, silent</option>
+            <option value="webspeech">In-browser + Web Speech (preview only)</option>
+            <option value="hyperframes">HyperFrames (server) — cinematic, silent (needs render URL)</option>
+          </select>
+        </div>
+        <div id="vVoiceWrap">
+          <label class="field-label" for="vVoice">Voice</label>
+          <select id="vVoice"></select>
+        </div>
+        <div class="video-actions">
+          <button id="previewBtn" class="ghost-btn" type="button">▶ Preview</button>
+          <button id="buildVideoBtn" class="primary-btn" type="button">🎬 Build video ad</button>
+        </div>
+      </div>
+      <p id="vNote" class="muted small">First use of Kokoro downloads a ~86&nbsp;MB voice model once (then cached). Recording happens in real time — keep this tab in front.</p>
+      <div id="vProgressWrap" class="vprogress hidden"><div id="vProgressBar"></div></div>
+      <p id="vStatus" class="muted small"></p>
+      <div class="video-stage">
+        <canvas id="videoCanvas" class="hidden"></canvas>
+        <video id="videoResult" class="hidden" controls playsinline></video>
+      </div>
+      <div id="vResultActions" class="row-actions hidden">
+        <button id="downloadVideoBtn" class="ghost-btn" type="button">⤓ Download video</button>
+        <button id="rebuildVideoBtn" class="ghost-btn" type="button">↻ Rebuild</button>
+      </div>
+    </section>
+
+    <!-- ACTIVITY LOG -->
+    <section class="card log-card">
+      <button id="logToggle" class="log-toggle" type="button" aria-expanded="false">▸ Agent activity log</button>
+      <div id="log" class="log hidden" role="log"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>AdForge — multi-agent ad studio. Powered by GLM + CogView on a free Z.ai key.</span>
+  </footer>
+
+  <!-- Settings modal -->
+  <div id="settingsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <div class="modal-box">
+      <div class="modal-head"><h2 id="setTitle">Settings</h2><button class="x" data-close>✕</button></div>
+      <div class="modal-body">
+        <p class="muted small">AdForge runs on <strong>one free Z.ai key</strong> — it powers both the GLM agents and CogView image generation. Your key is stored only in this browser and is sent only to Z.ai.</p>
+        <label class="field-label" for="zaiKey">Z.ai API key</label>
+        <input id="zaiKey" type="password" placeholder="paste your free z.ai key" autocomplete="off" />
+        <a class="link" href="https://z.ai" target="_blank" rel="noopener">Get a free key → z.ai (GLM-4.7-Flash &amp; CogView-3-Flash are free)</a>
+        <label class="field-label" for="glmModel">Agent model (GLM)</label>
+        <select id="glmModel"></select>
+        <label class="field-label" for="imageModel">Image model (CogView)</label>
+        <select id="imageModel"></select>
+        <label class="field-label" for="proxyBase">Proxy base <span class="muted">(optional — for a public Vercel demo)</span></label>
+        <input id="proxyBase" type="text" placeholder="e.g. /api — leave blank to call Z.ai directly" autocomplete="off" />
+        <p class="muted small">For a public demo where visitors need no key, deploy to Vercel, set the <code>ZAI_API_KEY</code> env var, and set this to <code>/api</code>. The proxy (<code>api/glm.js</code>, <code>api/image.js</code>) then holds the key server-side. On GitHub Pages, leave this blank and each visitor adds their own free key.</p>
+        <label class="field-label" for="renderUrl">HyperFrames render service <span class="muted">(optional — cinematic server video)</span></label>
+        <input id="renderUrl" type="text" placeholder="e.g. https://adforge-render.up.railway.app" autocomplete="off" />
+        <p class="muted small">Leave blank to use the in-browser recorder. Paste your deployed <code>adforge-render</code> URL to unlock frame-accurate GSAP video via HyperFrames (see that repo's README to deploy in a few clicks).</p>
+        <button id="saveSettings" class="primary-btn" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- How it works modal -->
+  <div id="howModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="howTitle">
+    <div class="modal-box">
+      <div class="modal-head"><h2 id="howTitle">How AdForge works</h2><button class="x" data-close>✕</button></div>
+      <div class="modal-body how">
+        <p>AdForge runs a <strong>team of five AI agents</strong> in a pipeline, then loops a critic over the results:</p>
+        <ol>
+          <li><strong>Strategist</strong> — turns your idea into a creative brief (angle, audience, message, mood, palette).</li>
+          <li><strong>Prompt Engineer</strong> — expands the brief into a strong master image prompt. Also powers <em>Improve prompt</em>.</li>
+          <li><strong>Art Director</strong> — splits the campaign into distinct scenes (hero, lifestyle, detail, CTA…).</li>
+          <li><strong>Copywriter</strong> — writes headline, subhead, body, CTA and a social caption per scene.</li>
+          <li><strong>Critic</strong> — scores each scene against the brief and proposes one concrete fix you can apply in a click.</li>
+        </ol>
+        <p>You can edit the <strong>master prompt</strong> (regenerates every scene) or any <strong>single scene's prompt</strong> (regenerates just that image), and rewrite copy or apply the critic's fix per scene.</p>
+        <p class="muted small">Stack: vanilla JS · one free Z.ai key powers everything — GLM-4.7-Flash / GLM-5.1 for the agents and CogView-3-Flash for the images. No backend required (an optional Vercel proxy can hold the key for public visitors).</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="js/config.js?v=3"></script>
+  <script src="js/util.js?v=3"></script>
+  <script src="js/llm.js?v=3"></script>
+  <script src="js/images.js?v=3"></script>
+  <script src="js/agents.js?v=3"></script>
+  <script src="js/orchestrator.js?v=3"></script>
+  <script src="js/export.js?v=3"></script>
+  <script src="js/voiceover.js?v=3"></script>
+  <script src="js/animator.js?v=3"></script>
+  <script src="js/recorder.js?v=3"></script>
+  <script src="js/hyperframes-template.js?v=3"></script>
+  <script src="js/hyperframes-client.js?v=3"></script>
+  <script src="js/video.js?v=3"></script>
+  <script src="js/ui.js?v=3"></script>
+  <script src="js/app.js?v=3"></script>
+</body>
+</html>

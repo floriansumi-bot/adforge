@@ -1,0 +1,12 @@
+{
+  "name": "AdForge — Multi-Agent Ad Studio",
+  "short_name": "AdForge",
+  "description": "A team of AI agents turns one idea into a brief, copy and editable visual ad scenes. Runs on a free Z.ai key.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b0d17",
+  "theme_color": "#0b0d17",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
