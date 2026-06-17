@@ -1,0 +1,7 @@
+{
+  "name": "ad-forge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AdForge — multi-agent AI ad studio. Static frontend + optional Vercel serverless proxies (api/glm.js, api/image.js, api/gemini.js)."
+}
