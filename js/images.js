@@ -41,6 +41,14 @@ AF.images = (function () {
     });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
+      // Friendly messages for the known Z.ai image errors (text/agents are free;
+      // CogView image generation is a PAID model on Z.ai's international endpoint).
+      if (/"1113"|insufficient balance|recharge/i.test(body)) {
+        throw new Error('Image preview unavailable — Z.ai image generation needs a paid balance (the agents, copy and prompts are free). Add credit at z.ai to render images.');
+      }
+      if (/"1211"|unknown model/i.test(body)) {
+        throw new Error('Image model not available on this Z.ai key — only paid CogView-4 is offered here.');
+      }
       throw new Error('Image ' + res.status + (body ? ' — ' + body.slice(0, 160) : ''));
     }
     const j = await res.json();

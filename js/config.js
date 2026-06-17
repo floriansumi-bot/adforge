@@ -13,7 +13,10 @@ AF.config = {
   CHAT_ENDPOINT: 'https://api.z.ai/api/paas/v4/chat/completions',
   IMAGE_ENDPOINT: 'https://api.z.ai/api/paas/v4/images/generations',
   GLM_MODELS: ['glm-4.7-flash', 'glm-4.5-flash', 'glm-4.6', 'glm-5.1'], // *-flash are free
-  IMAGE_MODELS: ['cogview-3-flash', 'cogview-4'],                       // cogview-3-flash is free
+  // NOTE: Z.ai's international endpoint does NOT carry the free cogview-3-flash
+  // (returns 1211 "Unknown Model"); the only recognised image model is the dated
+  // cogview-4 snapshot, which is PAID (needs a Z.ai balance / resource package).
+  IMAGE_MODELS: ['cogview-4-250304', 'cogview-4'],                      // paid — needs Z.ai credit
 
   // ---- Optional Gemini fallback (separate free tier; rescues the TEXT agents
   //      when Z.ai's free GLM is overloaded). OpenAI-compatible endpoint, CORS-ok. ----
@@ -54,7 +57,7 @@ AF.settings = (function () {
   const defaults = {
     zaiKey: '',              // free Z.ai API key (powers GLM + CogView)
     glmModel: 'glm-4.7-flash',
-    imageModel: 'cogview-3-flash',
+    imageModel: 'cogview-4-250304',
     proxyBase: defaultProxyBase(), // '/api' on a serverless host -> keyless for visitors
     renderUrl: '',           // optional HyperFrames render service base URL
     geminiKey: '',           // optional Google Gemini key — TEXT fallback when GLM is busy
