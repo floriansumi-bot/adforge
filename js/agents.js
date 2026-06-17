@@ -9,6 +9,20 @@ AF.agents = (function () {
   const sys = (content) => ({ role: 'system', content });
   const usr = (content) => ({ role: 'user', content });
 
+  // Robustly pull the intended array out of a model reply, even when the model
+  // nests it (e.g. under "json_shape") or echoes the request wrapper back.
+  // Prefers the named keys, then falls back to the first array of objects found.
+  function pickArray(out, keys) {
+    if (Array.isArray(out)) return out.filter((x) => x && typeof x === 'object');
+    if (!out || typeof out !== 'object') return [];
+    for (const k of keys) if (Array.isArray(out[k])) return out[k];
+    for (const k of Object.keys(out)) {
+      const found = pickArray(out[k], keys);
+      if (found.length) return found;
+    }
+    return [];
+  }
+
   /* 0) CONCEPTS — rough idea -> THREE distinct creative directions to pick from. */
   async function concepts(input) {
     const messages = [
@@ -35,7 +49,7 @@ AF.agents = (function () {
       }))
     ];
     const out = await llm.chatJson(messages, { temperature: 0.95, maxTokens: 1000 });
-    const arr = Array.isArray(out) ? out : (out.directions || out.concepts || []);
+    const arr = pickArray(out, ['directions', 'concepts']);
     return arr.slice(0, 3);
   }
 
@@ -111,7 +125,7 @@ AF.agents = (function () {
       }))
     ];
     const out = await llm.chatJson(messages, { temperature: 0.85, maxTokens: 1500 });
-    const scenes = Array.isArray(out) ? out : (out.scenes || []);
+    const scenes = pickArray(out, ['scenes']);
     return scenes.slice(0, nScenes);
   }
 
