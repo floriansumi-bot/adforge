@@ -72,9 +72,16 @@ AF.llm = (function () {
     throw new Error(lastErr);
   }
 
-  /* Fallback: Google Gemini (separate free tier), OpenAI-compatible endpoint. */
+  /* Fallback: Google Gemini (separate free tier), OpenAI-compatible endpoint.
+     Goes through the serverless /gemini proxy when one is configured (so the
+     public demo gets the fallback with no key of its own), else calls Gemini
+     directly with the personal key from Settings. */
   async function chatGemini(messages, o) {
     const s = settings.get();
+    const useProxy = settings.usingProxy();
+    const url = useProxy ? (s.proxyBase.trim().replace(/\/$/, '') + '/gemini') : config.GEMINI_ENDPOINT;
+    const headers = { 'Content-Type': 'application/json' };
+    if (!useProxy) headers['Authorization'] = 'Bearer ' + s.geminiKey.trim();
     const body = JSON.stringify({
       model: s.geminiModel || 'gemini-2.0-flash',
       messages,
@@ -86,11 +93,7 @@ AF.llm = (function () {
       if (attempt > 0) await sleep(backoff(attempt));
       let res;
       try {
-        res = await fetch(config.GEMINI_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + s.geminiKey.trim() },
-          body
-        });
+        res = await fetch(url, { method: 'POST', headers, body });
       } catch (e) { lastErr = 'network error (' + e.message + ')'; continue; }
       if (res.status === 429 || res.status >= 500) { lastErr = 'Gemini ' + res.status + ' (busy)'; continue; }
       if (!res.ok) { const b = await res.text().catch(() => ''); throw new Error('Gemini ' + res.status + (b ? ' — ' + b.slice(0, 180) : '')); }

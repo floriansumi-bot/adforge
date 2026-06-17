@@ -86,10 +86,12 @@ AF.settings = (function () {
     const s = get();
     return !!(s.renderUrl && s.renderUrl.trim());
   }
-  // A Gemini key is available as a TEXT fallback (not for images).
+  // A Gemini TEXT fallback is available (not for images) via a personal key OR via
+  // the serverless /gemini proxy (set GEMINI_API_KEY on the host to enable it for
+  // public visitors). The proxy returns a clear error if the server key is missing.
   function hasGemini() {
     const s = get();
-    return !!(s.geminiKey && s.geminiKey.trim());
+    return !!((s.geminiKey && s.geminiKey.trim()) || (s.proxyBase && s.proxyBase.trim()));
   }
   return { get, set, configured, usingProxy, hasRenderService, hasGemini };
 })();
