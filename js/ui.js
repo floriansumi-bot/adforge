@@ -290,16 +290,20 @@ AF.ui = (function () {
     dom.el('zaiKey').value = s.zaiKey;
     dom.el('proxyBase').value = s.proxyBase;
     dom.el('renderUrl').value = s.renderUrl;
+    dom.el('geminiKey').value = s.geminiKey;
     fillSelect(dom.el('glmModel'), config.GLM_MODELS, s.glmModel);
     fillSelect(dom.el('imageModel'), config.IMAGE_MODELS, s.imageModel);
+    fillSelect(dom.el('geminiModel'), config.GEMINI_MODELS, s.geminiModel);
   }
   function saveSettingsForm() {
     settings.set({
       zaiKey: dom.el('zaiKey').value.trim(),
       proxyBase: dom.el('proxyBase').value.trim(),
       renderUrl: dom.el('renderUrl').value.trim().replace(/\/+$/, ''),
+      geminiKey: dom.el('geminiKey').value.trim(),
       glmModel: dom.el('glmModel').value,
-      imageModel: dom.el('imageModel').value
+      imageModel: dom.el('imageModel').value,
+      geminiModel: dom.el('geminiModel').value
     });
     refreshBadge();
     closeModal('settingsModal');

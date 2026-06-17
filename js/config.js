@@ -15,6 +15,11 @@ AF.config = {
   GLM_MODELS: ['glm-4.7-flash', 'glm-4.5-flash', 'glm-4.6', 'glm-5.1'], // *-flash are free
   IMAGE_MODELS: ['cogview-3-flash', 'cogview-4'],                       // cogview-3-flash is free
 
+  // ---- Optional Gemini fallback (separate free tier; rescues the TEXT agents
+  //      when Z.ai's free GLM is overloaded). OpenAI-compatible endpoint, CORS-ok. ----
+  GEMINI_ENDPOINT: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+  GEMINI_MODELS: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-lite'], // free tier
+
   // ---- Generation defaults ----
   DEFAULT_SCENES: 4,
   MAX_SCENES: 8,
@@ -51,7 +56,9 @@ AF.settings = (function () {
     glmModel: 'glm-4.7-flash',
     imageModel: 'cogview-3-flash',
     proxyBase: defaultProxyBase(), // '/api' on a serverless host -> keyless for visitors
-    renderUrl: ''            // optional HyperFrames render service base URL
+    renderUrl: '',           // optional HyperFrames render service base URL
+    geminiKey: '',           // optional Google Gemini key — TEXT fallback when GLM is busy
+    geminiModel: 'gemini-2.0-flash'
   };
   let cache = null;
 
@@ -79,5 +86,10 @@ AF.settings = (function () {
     const s = get();
     return !!(s.renderUrl && s.renderUrl.trim());
   }
-  return { get, set, configured, usingProxy, hasRenderService };
+  // A Gemini key is available as a TEXT fallback (not for images).
+  function hasGemini() {
+    const s = get();
+    return !!(s.geminiKey && s.geminiKey.trim());
+  }
+  return { get, set, configured, usingProxy, hasRenderService, hasGemini };
 })();

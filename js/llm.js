@@ -16,8 +16,12 @@ AF.llm = (function () {
   const backoff = (attempt) => Math.round((1200 * Math.pow(1.8, attempt)) + Math.random() * 600);
 
   function activeBrain() {
-    if (!settings.configured()) return 'Not configured';
-    return (settings.usingProxy() ? 'proxy · ' : 'GLM · ') + settings.get().glmModel;
+    const hasZ = settings.configured(), hasG = settings.hasGemini();
+    if (!hasZ && !hasG) return 'Not configured';
+    const primary = hasZ
+      ? ((settings.usingProxy() ? 'proxy · ' : 'GLM · ') + settings.get().glmModel)
+      : ('Gemini · ' + settings.get().geminiModel);
+    return primary + (hasZ && hasG ? '  (+Gemini fallback)' : '');
   }
 
   function chatTarget() {
@@ -27,13 +31,9 @@ AF.llm = (function () {
       : { url: config.CHAT_ENDPOINT, auth: true };
   }
 
-  /* messages: [{role, content}]. Returns assistant text. */
-  async function chat(messages, opts = {}) {
-    const o = Object.assign({ temperature: 0.8, maxTokens: 1400 }, opts);
+  /* Primary: GLM via Z.ai, with retry/backoff on busy/overload/empty. Throws on exhaustion. */
+  async function chatGlm(messages, o) {
     const s = settings.get();
-    if (!settings.configured()) {
-      throw new Error('No Z.ai key set — open ⚙ Settings and add your free key.');
-    }
     const t = chatTarget();
     const headers = { 'Content-Type': 'application/json' };
     if (t.auth) headers['Authorization'] = 'Bearer ' + s.zaiKey.trim();
@@ -41,13 +41,11 @@ AF.llm = (function () {
       model: s.glmModel || 'glm-4.7-flash',
       messages,
       temperature: o.temperature,
-      // GLM-4.6/4.7 default to "thinking" ON; the hidden reasoning eats the
-      // token budget and returns empty content. Disable it for these direct
-      // JSON/text tasks, and keep a comfortable token floor so nothing truncates.
+      // GLM-4.6/4.7 default to "thinking" ON; the hidden reasoning eats the token
+      // budget and returns empty content. Disable it and keep a comfortable floor.
       max_tokens: Math.max(o.maxTokens || 1024, 1024),
       thinking: { type: 'disabled' }
     });
-
     let lastErr = 'GLM request failed';
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       if (attempt > 0) {
@@ -55,18 +53,11 @@ AF.llm = (function () {
         await sleep(backoff(attempt));
       }
       let res;
-      try {
-        res = await fetch(t.url, { method: 'POST', headers, body });
-      } catch (e) { lastErr = 'network error (' + e.message + ')'; continue; } // transient → retry
-
+      try { res = await fetch(t.url, { method: 'POST', headers, body }); }
+      catch (e) { lastErr = 'network error (' + e.message + ')'; continue; }
       if (res.status === 429 || res.status >= 500) { lastErr = 'GLM ' + res.status + ' (busy)'; continue; }
-      if (!res.ok) {
-        const b = await res.text().catch(() => '');
-        throw new Error('GLM ' + res.status + (b ? ' — ' + b.slice(0, 180) : ''));
-      }
-
+      if (!res.ok) { const b = await res.text().catch(() => ''); throw new Error('GLM ' + res.status + (b ? ' — ' + b.slice(0, 180) : '')); }
       const j = await res.json().catch(() => ({}));
-      // Z.ai sometimes returns 200 with an error code in the body (e.g. 1305 overload).
       if (j && j.error) {
         const code = String(j.error.code || '');
         if (RETRY_CODES.has(code)) { lastErr = 'GLM busy (' + code + ')'; continue; }
@@ -74,12 +65,59 @@ AF.llm = (function () {
       }
       const choice = j?.choices?.[0];
       let text = (choice?.message?.content || '').trim();
-      if (!text) text = (choice?.message?.reasoning_content || '').trim(); // fallback
+      if (!text) text = (choice?.message?.reasoning_content || '').trim();
       if (text) return text;
-      // Empty reply is usually transient overload — retry, then give up.
       lastErr = 'empty reply' + (choice?.finish_reason ? ' (finish_reason=' + choice.finish_reason + ')' : '');
     }
-    throw new Error(lastErr + ' — the free model is busy. Wait ~30s and try again, or switch the Agent model in Settings.');
+    throw new Error(lastErr);
+  }
+
+  /* Fallback: Google Gemini (separate free tier), OpenAI-compatible endpoint. */
+  async function chatGemini(messages, o) {
+    const s = settings.get();
+    const body = JSON.stringify({
+      model: s.geminiModel || 'gemini-2.0-flash',
+      messages,
+      temperature: o.temperature,
+      max_tokens: Math.max(o.maxTokens || 1024, 1024)
+    });
+    let lastErr = 'Gemini request failed';
+    for (let attempt = 0; attempt <= 2; attempt++) {
+      if (attempt > 0) await sleep(backoff(attempt));
+      let res;
+      try {
+        res = await fetch(config.GEMINI_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + s.geminiKey.trim() },
+          body
+        });
+      } catch (e) { lastErr = 'network error (' + e.message + ')'; continue; }
+      if (res.status === 429 || res.status >= 500) { lastErr = 'Gemini ' + res.status + ' (busy)'; continue; }
+      if (!res.ok) { const b = await res.text().catch(() => ''); throw new Error('Gemini ' + res.status + (b ? ' — ' + b.slice(0, 180) : '')); }
+      const j = await res.json().catch(() => ({}));
+      const text = (j?.choices?.[0]?.message?.content || '').trim();
+      if (text) return text;
+      lastErr = 'Gemini empty reply';
+    }
+    throw new Error(lastErr);
+  }
+
+  /* messages: [{role, content}]. Tries GLM (Z.ai), falls back to Gemini if configured. */
+  async function chat(messages, opts = {}) {
+    const o = Object.assign({ temperature: 0.8, maxTokens: 1400 }, opts);
+    const hasZ = settings.configured(), hasG = settings.hasGemini();
+    if (!hasZ && !hasG) {
+      throw new Error('No model key set — open ⚙ Settings and add your free Z.ai key (optionally a Gemini fallback key).');
+    }
+    if (hasZ) {
+      try { return await chatGlm(messages, o); }
+      catch (e) {
+        if (!hasG) throw new Error(e.message + ' — the free model is busy. Wait ~30s and try again, switch the Agent model, or add a Gemini fallback key in Settings.');
+        AF.log?.warn('GLM failed (' + e.message + ') — falling back to Gemini ' + (settings.get().geminiModel || 'gemini-2.0-flash'), 'LLM');
+      }
+    }
+    try { return await chatGemini(messages, o); }
+    catch (e) { throw new Error('Both providers failed — ' + e.message + '. Try again shortly.'); }
   }
 
   /* Robustly pull a JSON object/array out of a model reply, even if it
