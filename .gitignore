@@ -9,3 +9,9 @@ node_modules/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Local scratch / generated media
+_*.cjs
+*.log
+*.mp4
+*.webm
