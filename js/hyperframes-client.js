@@ -34,7 +34,8 @@ AF.hyperframesClient = (function () {
 
     const html = AF.hfTemplate.build(prepared, {
       format: opts.format || 'square',
-      brandColor: opts.brandColor || '#7c5cff'
+      brandColor: opts.brandColor || '#7c5cff',
+      palette: opts.palette || []
     });
 
     onStatus && onStatus('Rendering on the server (cinematic — this can take ~30–90s)…');

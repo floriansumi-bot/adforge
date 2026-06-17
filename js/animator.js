@@ -46,9 +46,38 @@ AF.animator = (function () {
     return { items: out, totalMs: t, allClean: items.every(it => it.clean !== false) };
   }
 
-  /* object-fit: cover draw with a scale + normalized pan offset (-1..1). */
-  function drawCover(ctx, img, W, H, scale, panX, panY) {
-    if (!img) { ctx.fillStyle = '#11142b'; ctx.fillRect(0, 0, W, H); return; }
+  function hexA(hex, a) {
+    let h = String(hex == null ? '#000' : hex).trim().replace('#', '');
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const n = parseInt(h.slice(0, 6) || '000000', 16) || 0;
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+
+  /* Image-free motion background from the brand palette: a drifting diagonal gradient
+     plus two slow radial blobs, so a scene with no rendered image still looks designed. */
+  function drawGradientBg(ctx, bg, W, H, p) {
+    const cols = (Array.isArray(bg) && bg.length) ? bg : ['#1a1138', '#2a1f5a', '#0f0e22'];
+    const c0 = cols[0], c1 = cols[1 % cols.length], c2 = cols[2 % cols.length] || cols[0];
+    const e = easeInOut(Math.min(1, Math.max(0, p)));
+    const off = (e - 0.5) * W * 0.45;
+    const g = ctx.createLinearGradient(-off, 0, W + off, H);
+    g.addColorStop(0, c0); g.addColorStop(0.55, c1); g.addColorStop(1, c2);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const blob = (cx, cy, r, col, a) => {
+      const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      rg.addColorStop(0, hexA(col, a)); rg.addColorStop(1, hexA(col, 0));
+      ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
+    };
+    blob(W * (0.26 + 0.12 * e), H * (0.30 + 0.10 * e), W * 0.55, c0, 0.55);
+    blob(W * (0.80 - 0.12 * e), H * (0.74 - 0.08 * e), W * 0.55, c2, 0.45);
+    // subtle darken so overlaid text stays legible across the whole frame
+    ctx.fillStyle = 'rgba(7,5,18,0.18)'; ctx.fillRect(0, 0, W, H);
+  }
+
+  /* object-fit: cover draw with a scale + normalized pan offset (-1..1).
+     With no image, paints the brand-palette motion background instead. */
+  function drawCover(ctx, img, W, H, scale, panX, panY, bg, p) {
+    if (!img) { drawGradientBg(ctx, bg, W, H, p == null ? 0.5 : p); return; }
     const ir = img.width / img.height, cr = W / H;
     let dw, dh;
     if (ir > cr) { dh = H * scale; dw = dh * ir; } else { dw = W * scale; dh = dw / ir; }
@@ -99,7 +128,7 @@ AF.animator = (function () {
     ctx.save();
     ctx.globalAlpha = alpha;
     const m = motionParams(item.motion, p);
-    drawCover(ctx, item.img, W, H, m.scale, m.panX, m.panY);
+    drawCover(ctx, item.img, W, H, m.scale, m.panX, m.panY, item.bg, p);
 
     // bottom scrim for legibility
     const grad = ctx.createLinearGradient(0, H * 0.45, 0, H);

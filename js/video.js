@@ -10,6 +10,22 @@ AF.video = (function () {
     return orchestrator.state.scenes.filter(s => s.status === 'done' && s.imageUrl);
   }
 
+  // Scenes usable in a video ad: any planned scene with copy or a name. The image is
+  // OPTIONAL — when a scene has no rendered image (e.g. the free tier can't generate
+  // one) the animator / HyperFrames paint a brand-palette motion background instead.
+  function adScenes() {
+    return orchestrator.state.scenes.filter(s => s.name || (s.copy && (s.copy.headline || s.copy.subhead)));
+  }
+
+  function brandPalette() {
+    const p = orchestrator.state.brief && orchestrator.state.brief.palette;
+    return (Array.isArray(p) && p.length) ? p : ['#7c5cff', '#ff5ca8', '#22d3ee'];
+  }
+  function sceneBg(i) {
+    const p = brandPalette();
+    return [p[i % p.length], p[(i + 1) % p.length], p[(i + 2) % p.length]];
+  }
+
   /* The line of voiceover spoken over a scene. */
   function sceneScript(scene, isLast) {
     const c = scene.copy || {};
@@ -26,11 +42,12 @@ AF.video = (function () {
   }
 
   async function prepare({ voiceEngine, voiceId, onStatus, onProgress }) {
-    const scenes = doneScenes();
-    if (!scenes.length) throw new Error('Generate a campaign with at least one scene first.');
+    const scenes = adScenes();
+    if (!scenes.length) throw new Error('Generate a campaign first.');
 
-    onStatus && onStatus('Loading scene images…');
-    const loaded = await Promise.all(scenes.map(s => animator.loadImage(s.imageUrl)));
+    onStatus && onStatus('Loading scenes…');
+    const loaded = await Promise.all(scenes.map(s =>
+      s.imageUrl ? animator.loadImage(s.imageUrl) : Promise.resolve({ img: null, clean: true })));
 
     const durations = scenes.map(() => 3200);  // default ms when there is no embeddable audio
     const audioBuffers = [];
@@ -54,7 +71,7 @@ AF.video = (function () {
     }
 
     const items = scenes.map((s, i) => ({
-      img: loaded[i].img, clean: loaded[i].clean,
+      img: loaded[i].img, clean: loaded[i].clean, bg: sceneBg(i),
       durMs: durations[i], motion: s.motion || 'kenburns',
       text: sceneText(s, i === scenes.length - 1)
     }));
@@ -85,14 +102,15 @@ AF.video = (function () {
 
   /* Live, audio-less preview loop. Returns a stop() function. */
   async function preview({ format = 'square', canvas } = {}) {
-    const scenes = doneScenes();
+    const scenes = adScenes();
     if (!scenes.length) throw new Error('No scenes yet.');
     const f = (animator.FORMATS[format] || animator.FORMATS.square);
     canvas.width = f.w; canvas.height = f.h;
     const ctx = canvas.getContext('2d');
-    const loaded = await Promise.all(scenes.map(s => animator.loadImage(s.imageUrl)));
+    const loaded = await Promise.all(scenes.map(s =>
+      s.imageUrl ? animator.loadImage(s.imageUrl) : Promise.resolve({ img: null, clean: true })));
     const items = scenes.map((s, i) => ({
-      img: loaded[i].img, clean: loaded[i].clean, durMs: 3000,
+      img: loaded[i].img, clean: loaded[i].clean, bg: sceneBg(i), durMs: 3000,
       motion: s.motion || 'kenburns', text: sceneText(s, i === scenes.length - 1)
     }));
     const timeline = animator.buildTimeline(items);
@@ -106,5 +124,5 @@ AF.video = (function () {
     return () => { stopped = true; cancelAnimationFrame(raf); };
   }
 
-  return { build, preview, sceneScript, doneScenes };
+  return { build, preview, sceneScript, doneScenes, adScenes };
 })();

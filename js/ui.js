@@ -349,7 +349,9 @@ AF.ui = (function () {
   }
 
   function updateVideoVisibility(state) {
-    const any = state.scenes.some(s => s.status === 'done' && s.imageUrl);
+    // Show the video panel once there are scenes with copy — images are optional
+    // (the video renders a brand-palette motion background when a scene has none).
+    const any = state.scenes.some(s => s.name || (s.copy && (s.copy.headline || s.copy.subhead)));
     dom.el('videoSection').classList.toggle('hidden', !any);
   }
 
@@ -383,11 +385,13 @@ AF.ui = (function () {
     try {
       let result;
       if (useServer) {
-        const scenes = AF.video.doneScenes().map(s => Object.assign({}, s, { durMs: s.durMs || 3200 }));
-        if (!scenes.length) throw new Error('Generate a campaign with at least one scene first.');
+        const scenes = AF.video.adScenes().map(s => Object.assign({}, s, { durMs: s.durMs || 3400 }));
+        if (!scenes.length) throw new Error('Generate a campaign first.');
         if (scenes.length > config.MAX_SCENES) throw new Error('Max ' + config.MAX_SCENES + ' scenes for a video.');
+        const pal = (O.state.brief && Array.isArray(O.state.brief.palette)) ? O.state.brief.palette : [];
         result = await AF.hyperframesClient.build(scenes,
-          { format: dom.el('vFormat').value, fps: 30, quality: 'high', brandColor: '#7c5cff', inlineImages: true },
+          { format: dom.el('vFormat').value, fps: 30, quality: 'high',
+            brandColor: pal[0] || '#7c5cff', palette: pal, inlineImages: true },
           { onStatus: vStatus });
       } else {
         result = await AF.video.build({
