@@ -146,7 +146,9 @@ AF.ui = (function () {
       ? '<div class="ph"><div class="spinner"></div><span>' + (s.status === 'pending' ? 'queued…' : 'rendering…') + '</span></div>'
       : s.status === 'error'
         ? '<div class="ph"><span>⚠ ' + dom.esc(s.error || 'failed') + '</span></div>'
-        : '<img src="' + dom.esc(s.imageUrl) + '" alt="' + dom.esc(s.name) + '" loading="lazy" />';
+        : s.imageUrl
+          ? '<img src="' + dom.esc(s.imageUrl) + '" alt="' + dom.esc(s.name) + '" loading="lazy" />'
+          : '<div class="ph"><span>🎬 ' + dom.esc(s.imageError ? 'No still image (Z.ai images are paid) — the video uses an animated background' : 'No image — animated background used in the video') + '</span></div>';
     const scoreBadge = s.critique?.score != null
       ? '<span class="scene-score" style="color:' + scoreColor(s.critique.score) + '">' + s.critique.score + '</span>' : '';
     const c = s.copy || {};
@@ -292,6 +294,10 @@ AF.ui = (function () {
     dom.el('renderUrl').value = s.renderUrl;
     dom.el('geminiKey').value = s.geminiKey;
     fillSelect(dom.el('glmModel'), config.GLM_MODELS, s.glmModel);
+    dom.el('imageProvider').innerHTML = [
+      ['pollinations', 'Pollinations — free, no key (default)'],
+      ['zai', 'Z.ai CogView — needs paid balance'],
+    ].map(([v, l]) => '<option value="' + v + '"' + (v === (s.imageProvider || 'pollinations') ? ' selected' : '') + '>' + l + '</option>').join('');
     fillSelect(dom.el('imageModel'), config.IMAGE_MODELS, s.imageModel);
     fillSelect(dom.el('geminiModel'), config.GEMINI_MODELS, s.geminiModel);
   }
@@ -302,6 +308,7 @@ AF.ui = (function () {
       renderUrl: dom.el('renderUrl').value.trim().replace(/\/+$/, ''),
       geminiKey: dom.el('geminiKey').value.trim(),
       glmModel: dom.el('glmModel').value,
+      imageProvider: dom.el('imageProvider').value,
       imageModel: dom.el('imageModel').value,
       geminiModel: dom.el('geminiModel').value
     });

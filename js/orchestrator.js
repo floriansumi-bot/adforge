@@ -29,20 +29,24 @@ AF.orchestrator = (function () {
     }, s);
   }
 
-  /* Render image + write copy for one scene (used in the pool). */
+  /* Write copy + (optionally) render an image for one scene.
+     Copy is ESSENTIAL; the image is OPTIONAL (CogView is paid / may be unavailable).
+     Run them independently so a failed image never discards the copy — the video
+     builder falls back to an animated motion-graphics background when there's no image. */
   async function renderScene(scene) {
-    scene.status = 'rendering'; pushScene(scene);
-    try {
-      const [img, copy] = await Promise.all([
-        images.generate(scene.prompt),
-        scene.copy ? Promise.resolve(scene.copy) : agents.copywriter(state.brief, scene)
-      ]);
-      scene.imageUrl = img.url; scene.copy = copy;
-      scene.status = 'done';
-    } catch (e) {
-      scene.status = 'error'; scene.error = e.message;
-      log.error('Scene "' + scene.name + '" failed: ' + e.message, 'Render');
-    }
+    scene.status = 'rendering'; scene.imageError = null; pushScene(scene);
+    const copyP = scene.copy
+      ? Promise.resolve(scene.copy)
+      : agents.copywriter(state.brief, scene).catch(e => { log.warn('Copy failed for "' + scene.name + '": ' + e.message, 'Copywriter'); return null; });
+    const imgP = images.generate(scene.prompt).then(r => r.url)
+      .catch(e => { scene.imageError = e.message; return null; });
+    const [copy, url] = await Promise.all([copyP, imgP]);
+    if (copy) scene.copy = copy;
+    scene.imageUrl = url || '';
+    // Usable as long as it has copy; image-free scenes still animate in the video.
+    scene.status = scene.copy ? 'done' : 'error';
+    if (!scene.copy) { scene.error = 'No copy generated'; log.error('Scene "' + scene.name + '" failed: no copy', 'Render'); }
+    else if (!url) { log.warn('Scene "' + scene.name + '": image unavailable — the video will use an animated background', 'Render'); }
     pushScene(scene);
     return scene;
   }

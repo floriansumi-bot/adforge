@@ -31,7 +31,10 @@ AF.voiceover = (function () {
   function loadKokoro(onProgress) {
     if (kokoro) return Promise.resolve(kokoro);
     if (loadingPromise) return loadingPromise;
-    const device = ('gpu' in navigator) ? 'webgpu' : 'wasm';
+    // IMPORTANT: force WASM. Kokoro's WebGPU backend produces garbled / gibberish
+    // audio on many GPUs (known kokoro-js / ONNX-Runtime-WebGPU issue). WASM is a
+    // touch slower but reliably correct, which is what matters for a voiceover.
+    const device = 'wasm';
     loadingPromise = (async () => {
       const mod = await import(/* @vite-ignore */ KOKORO_CDN);
       const KokoroTTS = mod.KokoroTTS;
@@ -42,13 +45,6 @@ AF.voiceover = (function () {
           // transformers.js reports {status, progress, loaded, total}
           if (onProgress && p && typeof p.progress === 'number') onProgress(p.progress / 100);
         }
-      }).catch(async (e) => {
-        // WebGPU init can fail on some machines — retry on WASM once.
-        if (device === 'webgpu') {
-          AF.log?.warn('Kokoro WebGPU init failed, retrying on WASM: ' + e.message, 'Voice');
-          return KokoroTTS.from_pretrained(KOKORO_MODEL, { dtype: 'q8', device: 'wasm' });
-        }
-        throw e;
       });
       kokoro = tts;
       AF.log?.agent?.('Voice', 'Kokoro voice model ready (' + device + ')');

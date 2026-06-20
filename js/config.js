@@ -18,6 +18,13 @@ AF.config = {
   // cogview-4 snapshot, which is PAID (needs a Z.ai balance / resource package).
   IMAGE_MODELS: ['cogview-4-250304', 'cogview-4'],                      // paid — needs Z.ai credit
 
+  // ---- Free, KEYLESS image generation (default). Pollinations serves the image
+  //      directly at the URL (FLUX) — no key, no balance, works for every visitor.
+  //      This is why the demo produces real ad images out of the box. ----
+  POLLINATIONS_BASE: 'https://image.pollinations.ai/prompt/',
+  POLLINATIONS_MODEL: 'flux',
+  IMAGE_PROVIDERS: ['pollinations', 'zai'],
+
   // ---- Optional Gemini fallback (separate free tier; rescues the TEXT agents
   //      when Z.ai's free GLM is overloaded). OpenAI-compatible endpoint, CORS-ok. ----
   GEMINI_ENDPOINT: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
@@ -55,8 +62,9 @@ AF.settings = (function () {
   }
 
   const defaults = {
-    zaiKey: '',              // free Z.ai API key (powers GLM + CogView)
+    zaiKey: '',              // free Z.ai API key (powers GLM; CogView images are paid)
     glmModel: 'glm-4.7-flash',
+    imageProvider: 'pollinations', // 'pollinations' = free/keyless images (default); 'zai' = paid CogView
     imageModel: 'cogview-4-250304',
     proxyBase: defaultProxyBase(), // '/api' on a serverless host -> keyless for visitors
     renderUrl: '',           // optional HyperFrames render service base URL

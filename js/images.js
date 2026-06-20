@@ -1,6 +1,7 @@
-/* AdForge — image generation via Z.ai CogView (cogview-3-flash is free).
-   Same key as the GLM agents. Calls Z.ai directly (CORS allowed) or via the
-   optional serverless proxy. Returns a hosted image URL. */
+/* AdForge — image generation. DEFAULT = Pollinations (FLUX): free, keyless, works
+   for every visitor, so the demo produces real ad images out of the box. Z.ai
+   CogView is an optional paid alternative (set Image source = Z.ai in Settings).
+   Either way, generate() returns a hosted image URL. */
 window.AF = window.AF || {};
 
 AF.images = (function () {
@@ -13,20 +14,44 @@ AF.images = (function () {
       : { url: config.IMAGE_ENDPOINT, auth: true };
   }
 
-  /* Preload so we only show a card once the pixels are ready, and catch failures. */
-  function preload(url) {
+  function parseSize(size) {
+    const m = /(\d+)\s*x\s*(\d+)/i.exec(String(size || ''));
+    return m ? [parseInt(m[1], 10), parseInt(m[2], 10)] : [1024, 1024];
+  }
+
+  /* Preload so we only show a card once the pixels are ready. Times out so a
+     slow/stuck image can never stall the whole scene pipeline. */
+  function preload(url, timeoutMs = 40000) {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.onload = () => resolve(url);
-      img.onerror = () => reject(new Error('Image failed to load'));
+      let done = false;
+      const finish = (fn, arg) => { if (!done) { done = true; clearTimeout(to); fn(arg); } };
+      const to = setTimeout(() => finish(reject, new Error('Image timed out')), timeoutMs);
+      img.onload = () => finish(resolve, url);
+      img.onerror = () => finish(reject, new Error('Image failed to load'));
       img.src = url;
     });
   }
 
+  /* Build a free Pollinations image URL — the URL itself returns the image. */
+  function pollinationsURL(prompt, opts = {}) {
+    const [w, h] = parseSize(opts.size || config.IMG_SIZE);
+    const seed = opts.seed != null ? opts.seed : Math.floor(Math.random() * 1e9);
+    const q = encodeURIComponent(String(prompt).slice(0, 1800));
+    return config.POLLINATIONS_BASE + q +
+      `?width=${w}&height=${h}&nologo=true&model=${config.POLLINATIONS_MODEL}&seed=${seed}`;
+  }
+
   /* Generate one image. Returns {url}. */
   async function generate(prompt, opts = {}) {
-    if (!settings.configured()) throw new Error('No Z.ai key set');
     const s = settings.get();
+    // Free keyless default. Only use Z.ai CogView when explicitly chosen AND a key
+    // (or proxy) is available; otherwise always fall through to Pollinations.
+    if ((s.imageProvider || 'pollinations') !== 'zai' || !settings.configured()) {
+      const url = pollinationsURL(prompt, opts);
+      await preload(url);
+      return { url };
+    }
     const t = target();
     const headers = { 'Content-Type': 'application/json' };
     if (t.auth) headers['Authorization'] = 'Bearer ' + s.zaiKey.trim();
