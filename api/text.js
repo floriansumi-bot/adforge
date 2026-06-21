@@ -46,7 +46,7 @@ export default async function handler(req, res) {
       const r = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + gkey },
-        body: JSON.stringify({ model: process.env.GEMINI_MODEL || 'gemini-2.0-flash', messages, temperature, max_tokens }),
+        body: JSON.stringify({ model: process.env.GEMINI_MODEL || 'gemini-2.5-flash', messages, temperature, max_tokens }),
       });
       if (r.ok) {
         const j = await r.json().catch(() => ({}));
