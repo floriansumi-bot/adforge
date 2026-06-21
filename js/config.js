@@ -9,26 +9,29 @@
 window.AF = window.AF || {};
 
 AF.config = {
-  // ---- Z.ai (Zhipu) — one key powers text + images ----
-  CHAT_ENDPOINT: 'https://api.z.ai/api/paas/v4/chat/completions',
-  IMAGE_ENDPOINT: 'https://api.z.ai/api/paas/v4/images/generations',
-  GLM_MODELS: ['glm-4.7-flash', 'glm-4.5-flash', 'glm-4.6', 'glm-5.1'], // *-flash are free
-  // NOTE: Z.ai's international endpoint does NOT carry the free cogview-3-flash
-  // (returns 1211 "Unknown Model"); the only recognised image model is the dated
-  // cogview-4 snapshot, which is PAID (needs a Z.ai balance / resource package).
-  IMAGE_MODELS: ['cogview-4-250304', 'cogview-4'],                      // paid — needs Z.ai credit
+  // ---- FREE, KEYLESS text generation (DEFAULT primary brain for every agent).
+  //      Pollinations' OpenAI-compatible endpoint — no key, CORS-enabled, works
+  //      for every visitor out of the box. (Z.ai's free GLM was unreliable/
+  //      unavailable, so it has been removed from the pipeline.) ----
+  POLLINATIONS_TEXT_ENDPOINT: 'https://text.pollinations.ai/openai',
+  POLLINATIONS_TEXT_MODEL: 'openai',   // GPT-OSS-20B on Pollinations' free anonymous tier
 
-  // ---- Free, KEYLESS image generation (default). Pollinations serves the image
-  //      directly at the URL (FLUX) — no key, no balance, works for every visitor.
-  //      This is why the demo produces real ad images out of the box. ----
+  // ---- FREE, KEYLESS image generation (default). Pollinations serves the image
+  //      directly at the URL (FLUX) — no key, no balance, works for everyone. ----
   POLLINATIONS_BASE: 'https://image.pollinations.ai/prompt/',
   POLLINATIONS_MODEL: 'flux',
-  IMAGE_PROVIDERS: ['pollinations', 'zai'],
 
-  // ---- Optional Gemini fallback (separate free tier; rescues the TEXT agents
-  //      when Z.ai's free GLM is overloaded). OpenAI-compatible endpoint, CORS-ok. ----
+  // ---- Optional FREE fallback: Google Gemini (separate free tier). Adds capacity
+  //      when Pollinations is busy. OpenAI-compatible endpoint, CORS-ok. Used only
+  //      if a Gemini key is configured (personal key, or the serverless proxy). ----
   GEMINI_ENDPOINT: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
   GEMINI_MODELS: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-lite'], // free tier
+
+  // Legacy Z.ai image endpoint — kept ONLY for an optional personal paid CogView
+  // key; the app never calls Z.ai by default. Image generation is keyless Pollinations.
+  IMAGE_ENDPOINT: 'https://api.z.ai/api/paas/v4/images/generations',
+  IMAGE_MODELS: ['cogview-4-250304', 'cogview-4'],
+  IMAGE_PROVIDERS: ['pollinations'],
 
   // ---- Generation defaults ----
   DEFAULT_SCENES: 4,

@@ -157,25 +157,16 @@
     <div class="modal-box">
       <div class="modal-head"><h2 id="setTitle">Settings</h2><button class="x" data-close>✕</button></div>
       <div class="modal-body">
-        <p class="muted small"><strong>Images are free, no key needed</strong> — they render via Pollinations (FLUX). The <strong>free Z.ai key</strong> below powers the GLM writing agents. Your key is stored only in this browser and is sent only to Z.ai.</p>
-        <label class="field-label" for="zaiKey">Z.ai API key</label>
-        <input id="zaiKey" type="password" placeholder="paste your free z.ai key" autocomplete="off" />
-        <a class="link" href="https://z.ai" target="_blank" rel="noopener">Get a free key → z.ai (GLM-4.7-Flash is free)</a>
-        <label class="field-label" for="glmModel">Agent model (GLM)</label>
-        <select id="glmModel"></select>
-        <label class="field-label" for="imageProvider">Image source</label>
-        <select id="imageProvider"></select>
-        <label class="field-label" for="imageModel">CogView model <span class="muted">(only used when Image source = Z.ai; needs paid balance)</span></label>
-        <select id="imageModel"></select>
-        <label class="field-label" for="geminiKey">Gemini fallback key <span class="muted">(optional — rescues text when GLM is busy)</span></label>
+        <p class="muted small"><strong>No key needed.</strong> AdForge runs on free, keyless AI — the writing agents use <strong>Pollinations</strong> and images render via <strong>Pollinations (FLUX)</strong>. Everything below is optional, just for extra capacity.</p>
+        <label class="field-label" for="geminiKey">Gemini fallback key <span class="muted">(optional — extra capacity when Pollinations is busy)</span></label>
         <input id="geminiKey" type="password" placeholder="paste a free Google AI Studio key" autocomplete="off" />
         <a class="link" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a free key → Google AI Studio</a>
         <label class="field-label" for="geminiModel">Gemini model</label>
         <select id="geminiModel"></select>
-        <p class="muted small">When Z.ai's free GLM is overloaded, AdForge falls back to Gemini for the agent text steps (images are independent — free via Pollinations). A separate free tier, so it usually isn't busy at the same time.</p>
-        <label class="field-label" for="proxyBase">Proxy base <span class="muted">(optional — for a public Vercel demo)</span></label>
-        <input id="proxyBase" type="text" placeholder="e.g. /api — leave blank to call Z.ai directly" autocomplete="off" />
-        <p class="muted small">For a public demo where visitors need no key, deploy to Vercel, set the <code>ZAI_API_KEY</code> env var, and set this to <code>/api</code>. The proxy (<code>api/glm.js</code>, <code>api/image.js</code>) then holds the key server-side. On GitHub Pages, leave this blank and each visitor adds their own free key.</p>
+        <p class="muted small">If a free Pollinations request is busy, AdForge automatically falls back to Gemini for the text steps (a separate free tier). Images are independent — always free via Pollinations.</p>
+        <label class="field-label" for="proxyBase">Proxy base <span class="muted">(optional — public Vercel demo)</span></label>
+        <input id="proxyBase" type="text" placeholder="e.g. /api — leave blank for direct keyless calls" autocomplete="off" />
+        <p class="muted small">Pollinations is keyless, so no proxy is required. To offer the Gemini fallback to public visitors without their own key, deploy to Vercel, set <code>GEMINI_API_KEY</code>, and set this to <code>/api</code> (the <code>api/gemini.js</code> proxy holds the key server-side).</p>
         <label class="field-label" for="renderUrl">HyperFrames render service <span class="muted">(optional — cinematic server video)</span></label>
         <input id="renderUrl" type="text" placeholder="e.g. https://adforge-render.up.railway.app" autocomplete="off" />
         <p class="muted small">Leave blank to use the in-browser recorder. Paste your deployed <code>adforge-render</code> URL to unlock frame-accurate GSAP video via HyperFrames (see that repo's README to deploy in a few clicks).</p>

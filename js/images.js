@@ -42,44 +42,9 @@ AF.images = (function () {
       `?width=${w}&height=${h}&nologo=true&model=${config.POLLINATIONS_MODEL}&seed=${seed}`;
   }
 
-  /* Generate one image. Returns {url}. */
+  /* Generate one image. Returns {url}. Free + keyless via Pollinations (FLUX). */
   async function generate(prompt, opts = {}) {
-    const s = settings.get();
-    // Free keyless default. Only use Z.ai CogView when explicitly chosen AND a key
-    // (or proxy) is available; otherwise always fall through to Pollinations.
-    if ((s.imageProvider || 'pollinations') !== 'zai' || !settings.configured()) {
-      const url = pollinationsURL(prompt, opts);
-      await preload(url);
-      return { url };
-    }
-    const t = target();
-    const headers = { 'Content-Type': 'application/json' };
-    if (t.auth) headers['Authorization'] = 'Bearer ' + s.zaiKey.trim();
-    const res = await fetch(t.url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        model: s.imageModel || 'cogview-3-flash',
-        prompt: String(prompt).slice(0, 1800),
-        size: opts.size || config.IMG_SIZE
-      })
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      // Friendly messages for the known Z.ai image errors (text/agents are free;
-      // CogView image generation is a PAID model on Z.ai's international endpoint).
-      if (/"1113"|insufficient balance|recharge/i.test(body)) {
-        throw new Error('Image preview unavailable — Z.ai image generation needs a paid balance (the agents, copy and prompts are free). Add credit at z.ai to render images.');
-      }
-      if (/"1211"|unknown model/i.test(body)) {
-        throw new Error('Image model not available on this Z.ai key — only paid CogView-4 is offered here.');
-      }
-      throw new Error('Image ' + res.status + (body ? ' — ' + body.slice(0, 160) : ''));
-    }
-    const j = await res.json();
-    const item = j?.data?.[0] || {};
-    const url = item.url || (item.b64_json ? 'data:image/png;base64,' + item.b64_json : '');
-    if (!url) throw new Error('No image returned');
+    const url = pollinationsURL(prompt, opts);
     await preload(url);
     return { url };
   }

@@ -1,81 +1,88 @@
-/* AdForge — LLM client (GLM via Z.ai).
-   One chat() entry point used by every agent. Calls Z.ai directly from the
-   browser (CORS is allowed) or, when a proxy base is configured, through a
-   serverless proxy that holds the key server-side. */
+/* AdForge — LLM client. FREE, multi-provider, KEYLESS by default.
+   One chat() entry point used by every agent. It tries free providers in order:
+     1) Pollinations  — keyless, OpenAI-compatible, CORS-enabled (works for everyone)
+     2) Gemini        — free tier, only if a Gemini key/proxy is configured
+   Z.ai/GLM has been removed (its free tier was unreliable/unavailable). */
 window.AF = window.AF || {};
 
 AF.llm = (function () {
   const { config, settings } = AF;
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-  // Z.ai's free tier (glm-*-flash) gets globally overloaded (HTTP 429 / body code
-  // 1305 "访问量过大"), and an overloaded reply can also come back empty. These are
-  // transient, so we retry with exponential backoff + jitter rather than failing.
-  const MAX_RETRIES = 4;
-  const RETRY_CODES = new Set(['1302', '1305', '429']);
-  const backoff = (attempt) => Math.round((1200 * Math.pow(1.8, attempt)) + Math.random() * 600);
+  const backoff = (attempt) => Math.round((900 * Math.pow(1.7, attempt)) + Math.random() * 500);
 
   function activeBrain() {
-    const hasZ = settings.configured(), hasG = settings.hasGemini();
-    if (!hasZ && !hasG) return 'Not configured';
-    const primary = hasZ
-      ? ((settings.usingProxy() ? 'proxy · ' : 'GLM · ') + settings.get().glmModel)
-      : ('Gemini · ' + settings.get().geminiModel);
-    return primary + (hasZ && hasG ? '  (+Gemini fallback)' : '');
+    if (settings.usingProxy()) return 'Free AI · Pollinations + Gemini (proxy)';
+    const s = settings.get();
+    const hasG = s.geminiKey && s.geminiKey.trim();
+    return 'Pollinations (free)' + (hasG ? '  (+Gemini)' : '');
   }
 
-  function chatTarget() {
+  /* ---- Provider 0: serverless proxy /text (FREE, KEYLESS for visitors) -----
+     The proxy runs the Pollinations→Gemini fallback SERVER-side, where
+     Pollinations is keyless and not Turnstile-gated. This is the primary path on
+     the deployed (Vercel) site; browsers can't call Pollinations text directly. */
+  async function chatProxyText(messages, o) {
     const s = settings.get();
-    return settings.usingProxy()
-      ? { url: s.proxyBase.trim().replace(/\/$/, '') + '/glm', auth: false }
-      : { url: config.CHAT_ENDPOINT, auth: true };
-  }
-
-  /* Primary: GLM via Z.ai, with retry/backoff on busy/overload/empty. Throws on exhaustion. */
-  async function chatGlm(messages, o) {
-    const s = settings.get();
-    const t = chatTarget();
-    const headers = { 'Content-Type': 'application/json' };
-    if (t.auth) headers['Authorization'] = 'Bearer ' + s.zaiKey.trim();
-    const body = JSON.stringify({
-      model: s.glmModel || 'glm-4.7-flash',
-      messages,
-      temperature: o.temperature,
-      // GLM-4.6/4.7 default to "thinking" ON; the hidden reasoning eats the token
-      // budget and returns empty content. Disable it and keep a comfortable floor.
-      max_tokens: Math.max(o.maxTokens || 1024, 1024),
-      thinking: { type: 'disabled' }
-    });
-    let lastErr = 'GLM request failed';
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      if (attempt > 0) {
-        AF.log?.warn('Z.ai busy — retrying in ' + Math.round(backoff(attempt) / 1000) + 's (' + attempt + '/' + MAX_RETRIES + ')', 'GLM');
-        await sleep(backoff(attempt));
-      }
+    const url = s.proxyBase.trim().replace(/\/$/, '') + '/text';
+    const body = JSON.stringify({ messages, temperature: o.temperature, max_tokens: o.maxTokens });
+    let lastErr = 'proxy failed';
+    for (let attempt = 0; attempt <= 2; attempt++) {
+      if (attempt > 0) { AF.log?.warn('Free AI busy — retrying (' + attempt + '/2)', 'LLM'); await sleep(backoff(attempt)); }
       let res;
-      try { res = await fetch(t.url, { method: 'POST', headers, body }); }
+      try { res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }); }
       catch (e) { lastErr = 'network error (' + e.message + ')'; continue; }
-      if (res.status === 429 || res.status >= 500) { lastErr = 'GLM ' + res.status + ' (busy)'; continue; }
-      if (!res.ok) { const b = await res.text().catch(() => ''); throw new Error('GLM ' + res.status + (b ? ' — ' + b.slice(0, 180) : '')); }
+      if (res.status === 429 || res.status >= 500) { lastErr = 'proxy ' + res.status + ' (busy)'; continue; }
+      if (!res.ok) { const b = await res.text().catch(() => ''); throw new Error('proxy ' + res.status + (b ? ' — ' + b.slice(0, 140) : '')); }
       const j = await res.json().catch(() => ({}));
-      if (j && j.error) {
-        const code = String(j.error.code || '');
-        if (RETRY_CODES.has(code)) { lastErr = 'GLM busy (' + code + ')'; continue; }
-        throw new Error('GLM error ' + code + (j.error.message ? ' — ' + j.error.message : ''));
-      }
-      const choice = j?.choices?.[0];
-      let text = (choice?.message?.content || '').trim();
-      if (!text) text = (choice?.message?.reasoning_content || '').trim();
+      const text = (j?.content || j?.choices?.[0]?.message?.content || '').trim();
       if (text) return text;
-      lastErr = 'empty reply' + (choice?.finish_reason ? ' (finish_reason=' + choice.finish_reason + ')' : '');
+      lastErr = 'proxy empty reply';
     }
     throw new Error(lastErr);
   }
 
-  /* Fallback: Google Gemini (separate free tier), OpenAI-compatible endpoint.
-     Goes through the serverless /gemini proxy when one is configured (so the
-     public demo gets the fallback with no key of its own), else calls Gemini
-     directly with the personal key from Settings. */
+  /* ---- Provider 1: Pollinations (FREE, KEYLESS) ----------------------------
+     OpenAI-compatible chat endpoint. No key, CORS '*'. Retries on busy/empty. */
+  async function chatPollinations(messages, o) {
+    const body = JSON.stringify({
+      model: config.POLLINATIONS_TEXT_MODEL || 'openai',
+      messages,
+      temperature: o.temperature,
+      seed: Math.floor(Math.random() * 1e6),
+      referrer: 'adforge',
+    });
+    let lastErr = 'Pollinations failed';
+    for (let attempt = 0; attempt <= 3; attempt++) {
+      if (attempt > 0) {
+        AF.log?.warn('Pollinations busy — retrying in ' + Math.round(backoff(attempt) / 1000) + 's (' + attempt + '/3)', 'LLM');
+        await sleep(backoff(attempt));
+      }
+      let res;
+      try {
+        res = await fetch(config.POLLINATIONS_TEXT_ENDPOINT, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body,
+        });
+      } catch (e) { lastErr = 'network error (' + e.message + ')'; continue; }
+      if (res.status === 429 || res.status >= 500) { lastErr = 'Pollinations ' + res.status + ' (busy)'; continue; }
+      // 4xx (e.g. 403 Turnstile from a browser origin) won't fix on retry — fail fast.
+      if (!res.ok) { const b = await res.text().catch(() => ''); throw new Error('Pollinations ' + res.status + (b ? ' — ' + b.slice(0, 120) : '')); }
+      // Response may be OpenAI-shaped JSON, or (rarely) raw text.
+      const raw = await res.text();
+      let text = '';
+      try {
+        const j = JSON.parse(raw);
+        text = (j?.choices?.[0]?.message?.content || j?.choices?.[0]?.text || '').trim();
+      } catch { text = raw.trim(); }
+      if (text) return text;
+      lastErr = 'Pollinations empty reply';
+    }
+    throw new Error(lastErr);
+  }
+
+  /* ---- Provider 2: Google Gemini (FREE tier, optional) ---------------------
+     Via the serverless /gemini proxy when configured (so public visitors get it
+     with no key), else directly with the personal key from Settings. */
   async function chatGemini(messages, o) {
     const s = settings.get();
     const useProxy = settings.usingProxy();
@@ -86,15 +93,14 @@ AF.llm = (function () {
       model: s.geminiModel || 'gemini-2.0-flash',
       messages,
       temperature: o.temperature,
-      max_tokens: Math.max(o.maxTokens || 1024, 1024)
+      max_tokens: Math.max(o.maxTokens || 1024, 1024),
     });
     let lastErr = 'Gemini request failed';
     for (let attempt = 0; attempt <= 2; attempt++) {
       if (attempt > 0) await sleep(backoff(attempt));
       let res;
-      try {
-        res = await fetch(url, { method: 'POST', headers, body });
-      } catch (e) { lastErr = 'network error (' + e.message + ')'; continue; }
+      try { res = await fetch(url, { method: 'POST', headers, body }); }
+      catch (e) { lastErr = 'network error (' + e.message + ')'; continue; }
       if (res.status === 429 || res.status >= 500) { lastErr = 'Gemini ' + res.status + ' (busy)'; continue; }
       if (!res.ok) { const b = await res.text().catch(() => ''); throw new Error('Gemini ' + res.status + (b ? ' — ' + b.slice(0, 180) : '')); }
       const j = await res.json().catch(() => ({}));
@@ -105,22 +111,29 @@ AF.llm = (function () {
     throw new Error(lastErr);
   }
 
-  /* messages: [{role, content}]. Tries GLM (Z.ai), falls back to Gemini if configured. */
+  /* messages: [{role, content}]. Tries each free provider in order. */
   async function chat(messages, opts = {}) {
     const o = Object.assign({ temperature: 0.8, maxTokens: 1400 }, opts);
-    const hasZ = settings.configured(), hasG = settings.hasGemini();
-    if (!hasZ && !hasG) {
-      throw new Error('No model key set — open ⚙ Settings and add your free Z.ai key (optionally a Gemini fallback key).');
-    }
-    if (hasZ) {
-      try { return await chatGlm(messages, o); }
+    const s = settings.get();
+    const providers = [];
+    // Primary on a serverless host: the proxy (keyless Pollinations + Gemini, server-side).
+    if (settings.usingProxy()) providers.push({ name: 'proxy', fn: () => chatProxyText(messages, o) });
+    // Direct personal Gemini key (local / GitHub Pages without a proxy).
+    if (!settings.usingProxy() && s.geminiKey && s.geminiKey.trim()) providers.push({ name: 'Gemini', fn: () => chatGemini(messages, o) });
+    // Direct Pollinations — works server-side / if Turnstile is ever lifted; harmless last resort.
+    providers.push({ name: 'Pollinations', fn: () => chatPollinations(messages, o) });
+
+    let lastErr = null;
+    for (let i = 0; i < providers.length; i++) {
+      const p = providers[i];
+      try { return await p.fn(); }
       catch (e) {
-        if (!hasG) throw new Error(e.message + ' — the free model is busy. Wait ~30s and try again, switch the Agent model, or add a Gemini fallback key in Settings.');
-        AF.log?.warn('GLM failed (' + e.message + ') — falling back to Gemini ' + (settings.get().geminiModel || 'gemini-2.0-flash'), 'LLM');
+        lastErr = e;
+        const next = providers[i + 1];
+        AF.log?.warn(p.name + ' failed (' + e.message + ')' + (next ? ' — falling back to ' + next.name : ''), 'LLM');
       }
     }
-    try { return await chatGemini(messages, o); }
-    catch (e) { throw new Error('Both providers failed — ' + e.message + '. Try again shortly.'); }
+    throw new Error('Free AI is busy right now (' + (lastErr ? lastErr.message : 'unknown') + '). Wait ~20s and try again.');
   }
 
   /* Robustly pull a JSON object/array out of a model reply, even if it

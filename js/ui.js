@@ -27,10 +27,9 @@ AF.ui = (function () {
   /* ---------- brain badge ---------- */
   function refreshBadge() {
     const badge = dom.el('brainBadge');
-    const ok = settings.configured();
-    badge.textContent = ok ? settings.get().glmModel : 'Add key';
-    badge.title = ok ? ('GLM + CogView via Z.ai' + (settings.usingProxy() ? ' (proxy)' : '')) : 'No Z.ai key set — click Settings';
-    badge.classList.toggle('glm', ok);
+    badge.textContent = settings.hasGemini() ? 'Free AI · +Gemini' : 'Free AI';
+    badge.title = 'Text: Pollinations (free, keyless)' + (settings.hasGemini() ? ' + Gemini fallback' : '') + ' · Images: Pollinations (free)';
+    badge.classList.add('glm');
   }
 
   /* ---------- pipeline ---------- */
@@ -259,11 +258,7 @@ AF.ui = (function () {
   async function onGenerate() {
     const input = readInput();
     if (!input.idea) { toast('Describe your product or idea first'); dom.el('idea').focus(); return; }
-    if (!settings.configured()) {
-      toast('Add your free Z.ai key in Settings first');
-      loadSettingsForm(); openModal('settingsModal');
-      return;
-    }
+    // No key needed — text runs on free, keyless Pollinations (Gemini optional).
     // Step 0: propose three directions; the campaign builds once the user picks one.
     const dirs = await O.proposeConcepts(input);
     if (dirs && dirs.length) {
@@ -289,27 +284,16 @@ AF.ui = (function () {
   }
   function loadSettingsForm() {
     const s = settings.get();
-    dom.el('zaiKey').value = s.zaiKey;
     dom.el('proxyBase').value = s.proxyBase;
     dom.el('renderUrl').value = s.renderUrl;
     dom.el('geminiKey').value = s.geminiKey;
-    fillSelect(dom.el('glmModel'), config.GLM_MODELS, s.glmModel);
-    dom.el('imageProvider').innerHTML = [
-      ['pollinations', 'Pollinations — free, no key (default)'],
-      ['zai', 'Z.ai CogView — needs paid balance'],
-    ].map(([v, l]) => '<option value="' + v + '"' + (v === (s.imageProvider || 'pollinations') ? ' selected' : '') + '>' + l + '</option>').join('');
-    fillSelect(dom.el('imageModel'), config.IMAGE_MODELS, s.imageModel);
     fillSelect(dom.el('geminiModel'), config.GEMINI_MODELS, s.geminiModel);
   }
   function saveSettingsForm() {
     settings.set({
-      zaiKey: dom.el('zaiKey').value.trim(),
       proxyBase: dom.el('proxyBase').value.trim(),
       renderUrl: dom.el('renderUrl').value.trim().replace(/\/+$/, ''),
       geminiKey: dom.el('geminiKey').value.trim(),
-      glmModel: dom.el('glmModel').value,
-      imageProvider: dom.el('imageProvider').value,
-      imageModel: dom.el('imageModel').value,
       geminiModel: dom.el('geminiModel').value
     });
     refreshBadge();
