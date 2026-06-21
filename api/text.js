@@ -14,10 +14,14 @@ export default async function handler(req, res) {
   const max_tokens = Math.max(body.max_tokens || body.maxTokens || 1024, 1024);
   if (!Array.isArray(messages) || !messages.length) { res.status(400).json({ error: 'messages[] required' }); return; }
 
+  // Optional override (?provider=gemini|pollinations, or body.provider) forces a
+  // single provider — handy for diagnostics. Default: try all free providers in order.
+  const only = String((req.query && req.query.provider) || body.provider || '').toLowerCase();
+
   const errors = [];
 
   // ---- 1) Pollinations (free, keyless) ----
-  try {
+  if (only !== 'gemini') try {
     const r = await fetch('https://text.pollinations.ai/openai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -37,7 +41,7 @@ export default async function handler(req, res) {
 
   // ---- 2) Gemini (free tier, only if a server key is set) ----
   const gkey = (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').trim();
-  if (gkey && /^[\x21-\x7E]+$/.test(gkey)) {
+  if (only !== 'pollinations' && gkey && /^[\x21-\x7E]+$/.test(gkey)) {
     try {
       const r = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
         method: 'POST',
