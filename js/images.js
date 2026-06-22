@@ -1,18 +1,16 @@
-/* AdForge — image generation. DEFAULT = Pollinations (FLUX): free, keyless, works
-   for every visitor, so the demo produces real ad images out of the box. Z.ai
-   CogView is an optional paid alternative (set Image source = Z.ai in Settings).
-   Either way, generate() returns a hosted image URL. */
+/* AdForge — image generation. Free + keyless via Pollinations (FLUX). On a host with
+   the serverless proxy (Vercel) images go through /api/image, which fetches the pixels
+   server-side — browsers can no longer call Pollinations' image endpoint directly (it
+   Turnstile-gates browser requests → 403). generate() returns a hosted image URL.
+
+   Reliability: the free tier 429s on concurrent requests and FLUX can be slow when
+   busy, so generate() RETRIES with backoff + a fresh seed (giving the rate limit time
+   to clear), and the final attempt falls back to the 'sana' model. Scenes also render
+   one at a time (IMG_CONCURRENCY = 1) to avoid tripping the rate limit. */
 window.AF = window.AF || {};
 
 AF.images = (function () {
   const { config, settings } = AF;
-
-  function target() {
-    const s = settings.get();
-    return settings.usingProxy()
-      ? { url: s.proxyBase.trim().replace(/\/$/, '') + '/image', auth: false }
-      : { url: config.IMAGE_ENDPOINT, auth: true };
-  }
 
   function parseSize(size) {
     const m = /(\d+)\s*x\s*(\d+)/i.exec(String(size || ''));
@@ -33,20 +31,49 @@ AF.images = (function () {
     });
   }
 
-  /* Build a free Pollinations image URL — the URL itself returns the image. */
-  function pollinationsURL(prompt, opts = {}) {
+  /* Build the image URL. On a host with the serverless proxy (Vercel) we go through
+     /api/image, which fetches the pixels server-side — browsers can't call
+     Pollinations' image endpoint directly anymore (it's Turnstile-gated → 403). The
+     proxy image is also same-origin, so the canvas stays CORS-clean for recording.
+     With no proxy (local / GitHub Pages) we fall back to the direct URL. */
+  function imageURL(prompt, opts = {}) {
     const [w, h] = parseSize(opts.size || config.IMG_SIZE);
     const seed = opts.seed != null ? opts.seed : Math.floor(Math.random() * 1e9);
+    const model = opts.model || config.POLLINATIONS_MODEL;
     const q = encodeURIComponent(String(prompt).slice(0, 1800));
+    if (settings.usingProxy()) {
+      const base = settings.get().proxyBase.trim().replace(/\/$/, '');
+      return `${base}/image?prompt=${q}&width=${w}&height=${h}&model=${model}&seed=${seed}`;
+    }
     return config.POLLINATIONS_BASE + q +
-      `?width=${w}&height=${h}&nologo=true&model=${config.POLLINATIONS_MODEL}&seed=${seed}`;
+      `?width=${w}&height=${h}&nologo=true&nofeed=true&model=${model}&seed=${seed}&referrer=adforge`;
   }
 
-  /* Generate one image. Returns {url}. Free + keyless via Pollinations (FLUX). */
+  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+  /* Each attempt waits a little longer (backoff) and uses a fresh seed, so a rate-
+     limited free tier gets time to cool down between tries. The last attempt falls
+     back to 'sana' (the model Pollinations currently advertises) when FLUX is busy. */
+  const ATTEMPTS = [
+    { model: 'flux', timeoutMs: 58000, backoffMs: 0 },
+    { model: 'flux', timeoutMs: 58000, backoffMs: 2500 },
+    { model: 'sana', timeoutMs: 58000, backoffMs: 4000 }
+  ];
+
+  /* Generate one image. Returns {url, model}. Retries with backoff before giving up. */
   async function generate(prompt, opts = {}) {
-    const url = pollinationsURL(prompt, opts);
-    await preload(url);
-    return { url };
+    const baseSeed = opts.seed != null ? opts.seed : Math.floor(Math.random() * 1e9);
+    let lastErr;
+    for (let i = 0; i < ATTEMPTS.length; i++) {
+      const a = ATTEMPTS[i];
+      if (a.backoffMs) await delay(a.backoffMs);
+      const url = imageURL(prompt, { ...opts, model: a.model, seed: baseSeed + i * 7919 });
+      try {
+        await preload(url, a.timeoutMs);
+        return { url, model: a.model };
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error('Image generation failed');
   }
 
   /* Fetch the rendered image as a blob and trigger a download (falls back to a new tab). */

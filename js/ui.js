@@ -147,7 +147,7 @@ AF.ui = (function () {
         ? '<div class="ph"><span>⚠ ' + dom.esc(s.error || 'failed') + '</span></div>'
         : s.imageUrl
           ? '<img src="' + dom.esc(s.imageUrl) + '" alt="' + dom.esc(s.name) + '" loading="lazy" />'
-          : '<div class="ph"><span>🎬 ' + dom.esc(s.imageError ? 'No still image (Z.ai images are paid) — the video uses an animated background' : 'No image — animated background used in the video') + '</span></div>';
+          : '<div class="ph"><span>🎬 ' + dom.esc(s.imageError ? 'Image didn’t generate this time — the video uses an animated background' : 'No image — animated background used in the video') + '</span></div>';
     const scoreBadge = s.critique?.score != null
       ? '<span class="scene-score" style="color:' + scoreColor(s.critique.score) + '">' + s.critique.score + '</span>' : '';
     const c = s.copy || {};

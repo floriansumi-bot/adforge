@@ -31,7 +31,20 @@ AF.recorder = (function () {
     if (!supported()) throw new Error('This browser cannot record canvas video (no MediaRecorder/captureStream).');
     const fps = opts.fps || 30;
     const canvas = opts.canvas;
-    const videoStream = canvas.captureStream(fps);
+    // Prefer MANUAL frame capture: captureStream(0) emits a frame only when we call
+    // requestFrame(), so every frame we draw is captured exactly once — no dropped
+    // or duplicated frames, which is what makes auto-capture look choppy. Fall back
+    // to auto-capture(fps) where requestFrame isn't supported (e.g. some Safari).
+    let videoStream, vTrack, manual = false;
+    try {
+      videoStream = canvas.captureStream(0);
+      vTrack = videoStream.getVideoTracks()[0];
+      manual = !!(vTrack && typeof vTrack.requestFrame === 'function');
+    } catch { manual = false; }
+    if (!manual) {
+      videoStream = canvas.captureStream(fps);
+      vTrack = videoStream.getVideoTracks()[0];
+    }
     const tracks = [...videoStream.getVideoTracks()];
 
     // Build + schedule the audio track.
@@ -62,18 +75,28 @@ AF.recorder = (function () {
     const done = new Promise((resolve) => { rec.onstop = () => resolve(); });
     rec.start(100);
 
-    // Drive the animation in real time off the wall clock. setTimeout (not
-    // requestAnimationFrame) so a backgrounded tab throttles but never fully
-    // freezes — rAF pauses entirely when hidden and would hang the render.
+    // Drive the animation in real time off the wall clock with setTimeout (NOT
+    // requestAnimationFrame: rAF throttles to ~1 fps the moment the tab loses focus,
+    // which would wreck the recording — setTimeout keeps a steady cadence and finishes
+    // even if backgrounded). Each tick draws the frame for the current wall-clock time,
+    // then (in manual mode) requestFrame() captures THAT exact frame — a 1:1 draw→frame
+    // mapping, so the encoder never duplicates or drops frames. That 1:1 mapping is what
+    // removes the choppiness; auto-capture sampled the canvas on its own clock and
+    // judders when a draw lands late. The schedule is self-correcting so heavy encoder/
+    // draw load can't let the frame rate quietly drift below target.
     const startedAt = performance.now();
     const frameMs = 1000 / fps;
     await new Promise((resolve) => {
+      let frame = 0;
       function tick() {
         const t = performance.now() - startedAt;
         try { opts.render(Math.min(t, opts.totalMs)); } catch (e) { /* keep recording */ }
+        if (manual) { try { vTrack.requestFrame(); } catch {} }
         if (opts.onProgress) opts.onProgress(Math.min(1, t / opts.totalMs));
         if (t >= opts.totalMs) return resolve();
-        setTimeout(tick, frameMs);
+        frame++;
+        const drift = (performance.now() - startedAt) - frame * frameMs;
+        setTimeout(tick, Math.max(0, frameMs - drift));
       }
       tick();
     });

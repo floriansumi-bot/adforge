@@ -37,7 +37,8 @@ AF.config = {
   DEFAULT_SCENES: 4,
   MAX_SCENES: 8,
   IMG_SIZE: '1024x1024',
-  IMG_CONCURRENCY: 2, // how many scenes render at once (free tier is rate-limited)
+  IMG_CONCURRENCY: 1, // render scenes one at a time — Pollinations' free tier 429s on
+                      // concurrent image requests, so serializing is far more reliable.
 
   EXAMPLES: [
     'A small-batch oat-milk brand for busy city mornings',
