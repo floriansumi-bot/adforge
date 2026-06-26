@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AdForge: Multi-Agent Ad Studio</title>
-  <meta name="description" content="An autonomous multi-agent ad-creative studio. A team of AI agents turns one idea into a brief, copy and editable visual scenes, free &amp; keyless via Pollinations (FLUX), with an optional Gemini fallback." />
+  <meta name="description" content="A multi-agent ad studio that runs itself. Give it one idea and a team of AI agents writes the brief and the copy, then renders editable visual scenes. Free and keyless on Pollinations (FLUX), with an optional Gemini fallback." />
   <meta name="theme-color" content="#0b0d17" />
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
   <link rel="manifest" href="manifest.webmanifest" />
@@ -149,7 +149,7 @@
   </main>
 
   <footer class="footer">
-    <span>AdForge, a multi-agent ad studio. Free &amp; keyless: text &amp; images via Pollinations (FLUX), optional Gemini fallback.</span>
+    <span>AdForge, a multi-agent ad studio. Free and keyless: text and images both run on Pollinations (FLUX), with Gemini as an optional fallback.</span>
   </footer>
 
   <!-- Settings modal -->
@@ -180,16 +180,16 @@
     <div class="modal-box">
       <div class="modal-head"><h2 id="howTitle">How AdForge works</h2><button class="x" data-close>✕</button></div>
       <div class="modal-body how">
-        <p>AdForge runs a <strong>team of five AI agents</strong> in a pipeline, then loops a critic over the results:</p>
+        <p>AdForge puts a <strong>team of five AI agents</strong> on your idea, running them in a pipeline and then looping a critic back over the results:</p>
         <ol>
-          <li><strong>Strategist</strong>: turns your idea into a creative brief (angle, audience, message, mood, palette).</li>
-          <li><strong>Prompt Engineer</strong>: expands the brief into a strong master image prompt. Also powers <em>Improve prompt</em>.</li>
-          <li><strong>Art Director</strong>: splits the campaign into distinct scenes (hero, lifestyle, detail, CTA…).</li>
-          <li><strong>Copywriter</strong>: writes headline, subhead, body, CTA and a social caption per scene.</li>
-          <li><strong>Critic</strong>: scores each scene against the brief and proposes one concrete fix you can apply in a click.</li>
+          <li><strong>Strategist</strong>: reads your idea and writes the creative brief (angle, audience, message, mood, palette).</li>
+          <li><strong>Prompt Engineer</strong>: turns the brief into a strong master image prompt, and it's what powers <em>Improve prompt</em>.</li>
+          <li><strong>Art Director</strong>: breaks the campaign into distinct scenes (hero, lifestyle, detail, CTA…).</li>
+          <li><strong>Copywriter</strong>: writes the headline, subhead, body, CTA and a social caption for every scene.</li>
+          <li><strong>Critic</strong>: grades every scene against the brief and suggests one concrete fix you can apply in a click.</li>
         </ol>
-        <p>You can edit the <strong>master prompt</strong> (regenerates every scene) or any <strong>single scene's prompt</strong> (regenerates just that image), and rewrite copy or apply the critic's fix per scene.</p>
-        <p class="muted small">Stack: vanilla JS · free &amp; keyless. The writing agents run on Pollinations (with an optional Gemini fallback) and images render via Pollinations (FLUX, with a fast turbo fallback). No backend required (an optional Vercel proxy can hold a Gemini key for public visitors).</p>
+        <p>From there it's yours to tweak: edit the <strong>master prompt</strong> to regenerate every scene, or a <strong>single scene's prompt</strong> to redo just that image. You can also rewrite the copy or apply the critic's fix on any scene.</p>
+        <p class="muted small">Stack: vanilla JS · free &amp; keyless. The writing agents run on Pollinations, with Gemini as an optional fallback, and the images render on Pollinations too (FLUX, with a fast turbo fallback). There's no backend to run, though an optional Vercel proxy can hold a Gemini key for public visitors.</p>
       </div>
     </div>
   </div>
