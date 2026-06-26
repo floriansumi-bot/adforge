@@ -23,7 +23,7 @@
 
   function start() {
     AF.ui.init();
-    AF.log.info('AdForge ready — ' + AF.llm.activeBrain() + '. Describe a product and hit Generate.');
+    AF.log.info('AdForge ready. ' + AF.llm.activeBrain() + '. Describe a product and hit Generate.');
   }
 
   (async () => {

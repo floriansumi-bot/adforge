@@ -38,7 +38,7 @@ AF.hyperframesClient = (function () {
       palette: opts.palette || []
     });
 
-    onStatus && onStatus('Rendering on the server (cinematic — this can take ~30–90s)…');
+    onStatus && onStatus('Rendering on the server (cinematic; this can take ~30–90s)…');
     let res;
     try {
       res = await fetch(base + '/render', {

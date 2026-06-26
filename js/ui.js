@@ -147,7 +147,7 @@ AF.ui = (function () {
         ? '<div class="ph"><span>⚠ ' + dom.esc(s.error || 'failed') + '</span></div>'
         : s.imageUrl
           ? '<img src="' + dom.esc(s.imageUrl) + '" alt="' + dom.esc(s.name) + '" loading="lazy" />'
-          : '<div class="ph"><span>🎬 ' + dom.esc(s.imageError ? 'Image didn’t generate this time — the video uses an animated background' : 'No image — animated background used in the video') + '</span></div>';
+          : '<div class="ph"><span>🎬 ' + dom.esc(s.imageError ? 'Image didn’t generate this time; the video uses an animated background' : 'No image, animated background used in the video') + '</span></div>';
     const scoreBadge = s.critique?.score != null
       ? '<span class="scene-score" style="color:' + scoreColor(s.critique.score) + '">' + s.critique.score + '</span>' : '';
     const c = s.copy || {};
@@ -216,7 +216,7 @@ AF.ui = (function () {
       } else if (act === 'improve') {
         if (promptEl) await O.updateScenePrompt(id, promptEl.value);
         await O.improveScenePrompt(id);
-        toast('Prompt improved — hit Regenerate to apply');
+        toast('Prompt improved. Hit Regenerate to apply');
       } else if (act === 'copy') {
         await O.rewriteCopy(id); toast('Copy rewritten');
       } else if (act === 'critique') {
@@ -229,7 +229,7 @@ AF.ui = (function () {
       }
     } catch (err) {
       log.error('Action "' + act + '" failed: ' + err.message);
-      toast('Something failed — see the activity log');
+      toast('Something failed. See the activity log');
     } finally { btn.disabled = false; }
   }
 
@@ -320,7 +320,7 @@ AF.ui = (function () {
     if (engine === 'kokoro') {
       wrap.classList.remove('hidden');
       sel.innerHTML = AF.voiceover.KOKORO_VOICES.map(v => '<option value="' + v.id + '">' + dom.esc(v.label) + '</option>').join('');
-      note.innerHTML = 'First use of Kokoro downloads a ~86&nbsp;MB voice model once (then cached). Recording happens in real time — keep this tab in front.';
+      note.innerHTML = 'First use of Kokoro downloads a ~86&nbsp;MB voice model once (then cached). Recording happens in real time, so keep this tab in front.';
     } else if (engine === 'webspeech') {
       wrap.classList.remove('hidden');
       const voices = AF.voiceover.webSpeechVoices();
@@ -331,7 +331,7 @@ AF.ui = (function () {
     } else if (engine === 'hyperframes') {
       wrap.classList.add('hidden');
       note.innerHTML = settings.hasRenderService()
-        ? 'Cinematic GSAP video rendered on your HyperFrames server (frame-accurate). Silent in this version — voiceover stays on the in-browser engines.'
+        ? 'Cinematic GSAP video rendered on your HyperFrames server (frame-accurate). Silent in this version; voiceover stays on the in-browser engines.'
         : '⚠ No render service set. Add your <strong>HyperFrames render service URL</strong> in ⚙ Settings (see the adforge-render repo to deploy it).';
     } else {
       wrap.classList.add('hidden');
@@ -365,7 +365,7 @@ AF.ui = (function () {
       toast('Add your HyperFrames render service URL in Settings first');
       loadSettingsForm(); openModal('settingsModal'); return;
     }
-    if (engine === 'webspeech') toast('Web Speech can’t be embedded — building a silent video. Pick Kokoro for an embedded voice.');
+    if (engine === 'webspeech') toast('Web Speech can’t be embedded, so building a silent video. Pick Kokoro for an embedded voice.');
     const useServer = engine === 'hyperframes';
     videoBusy = true;
     const btn = dom.el('buildVideoBtn'); btn.disabled = true; const old = btn.textContent; btn.textContent = '⏳ Building…';
@@ -399,13 +399,13 @@ AF.ui = (function () {
       canvas.classList.add('hidden');
       dom.el('vResultActions').classList.remove('hidden');
       setVideoProgress(null);
-      vStatus('Done — ' + result.ext.toUpperCase() + ', ' + Math.round(result.durationMs / 1000) + 's. Press play.');
+      vStatus('Done. ' + result.ext.toUpperCase() + ', ' + Math.round(result.durationMs / 1000) + 's. Press play.');
       toast('Video ad ready');
     } catch (e) {
       setVideoProgress(null);
       vStatus('Failed: ' + (e.message || e));
       log.error('Video build failed: ' + (e.message || e), 'Video');
-      toast('Video build failed — see status/log');
+      toast('Video build failed. See status/log');
     } finally { videoBusy = false; btn.disabled = false; btn.textContent = old; }
   }
 
@@ -443,7 +443,7 @@ AF.ui = (function () {
     dom.el('improveMasterBtn').addEventListener('click', async () => {
       const btn = dom.el('improveMasterBtn'); btn.disabled = true;
       try { await O.setMasterPrompt(dom.el('masterPrompt').value); await O.improveMasterPrompt(); toast('Master prompt improved'); }
-      catch (e) { toast('Improve failed — see log'); } finally { btn.disabled = false; }
+      catch (e) { toast('Improve failed. See log'); } finally { btn.disabled = false; }
     });
     dom.el('regenAllBtn').addEventListener('click', async () => {
       await O.setMasterPrompt(dom.el('masterPrompt').value);

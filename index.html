@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AdForge — Multi-Agent Ad Studio</title>
-  <meta name="description" content="An autonomous multi-agent ad-creative studio. A team of AI agents turns one idea into a brief, copy and editable visual scenes — free &amp; keyless via Pollinations (FLUX), with an optional Gemini fallback." />
+  <title>AdForge: Multi-Agent Ad Studio</title>
+  <meta name="description" content="An autonomous multi-agent ad-creative studio. A team of AI agents turns one idea into a brief, copy and editable visual scenes, free &amp; keyless via Pollinations (FLUX), with an optional Gemini fallback." />
   <meta name="theme-color" content="#0b0d17" />
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
   <link rel="manifest" href="manifest.webmanifest" />
@@ -70,7 +70,7 @@
     <section id="conceptsSection" class="card hidden">
       <div class="section-head">
         <h2>Pick a creative direction</h2>
-        <span class="muted">Three directions from the Strategist — choose one to build the full campaign</span>
+        <span class="muted">Three directions from the Strategist; choose one to build the full campaign</span>
       </div>
       <div id="conceptsGrid" class="concepts-grid" aria-label="Creative directions"></div>
     </section>
@@ -99,7 +99,7 @@
     <section id="videoSection" class="card hidden">
       <div class="section-head">
         <h2>🎬 Video ad</h2>
-        <span class="muted small">Animate the scenes into a video with an AI voiceover — built entirely in your browser.</span>
+        <span class="muted small">Animate the scenes into a video with an AI voiceover, built entirely in your browser.</span>
       </div>
       <div class="video-controls">
         <div>
@@ -116,7 +116,7 @@
             <option value="kokoro">In-browser + Kokoro voice (realistic, no server)</option>
             <option value="none">In-browser, silent</option>
             <option value="webspeech">In-browser + Web Speech (preview only)</option>
-            <option value="hyperframes">HyperFrames (server) — cinematic, silent (needs render URL)</option>
+            <option value="hyperframes">HyperFrames (server): cinematic, silent (needs render URL)</option>
           </select>
         </div>
         <div id="vVoiceWrap">
@@ -128,7 +128,7 @@
           <button id="buildVideoBtn" class="primary-btn" type="button">🎬 Build video ad</button>
         </div>
       </div>
-      <p id="vNote" class="muted small">First use of Kokoro downloads a ~86&nbsp;MB voice model once (then cached). Recording happens in real time — keep this tab in front.</p>
+      <p id="vNote" class="muted small">First use of Kokoro downloads a ~86&nbsp;MB voice model once (then cached). Recording happens in real time, so keep this tab in front.</p>
       <div id="vProgressWrap" class="vprogress hidden"><div id="vProgressBar"></div></div>
       <p id="vStatus" class="muted small"></p>
       <div class="video-stage">
@@ -149,7 +149,7 @@
   </main>
 
   <footer class="footer">
-    <span>AdForge — multi-agent ad studio. Free &amp; keyless — text &amp; images via Pollinations (FLUX), optional Gemini fallback.</span>
+    <span>AdForge, a multi-agent ad studio. Free &amp; keyless: text &amp; images via Pollinations (FLUX), optional Gemini fallback.</span>
   </footer>
 
   <!-- Settings modal -->
@@ -157,19 +157,19 @@
     <div class="modal-box">
       <div class="modal-head"><h2 id="setTitle">Settings</h2><button class="x" data-close>✕</button></div>
       <div class="modal-body">
-        <p class="muted small"><strong>No key needed.</strong> AdForge runs on free, keyless AI — the writing agents use <strong>Pollinations</strong> and images render via <strong>Pollinations (FLUX)</strong>. Everything below is optional, just for extra capacity.</p>
-        <label class="field-label" for="geminiKey">Gemini fallback key <span class="muted">(optional — extra capacity when Pollinations is busy)</span></label>
+        <p class="muted small"><strong>No key needed.</strong> AdForge runs on free, keyless AI: the writing agents use <strong>Pollinations</strong> and images render via <strong>Pollinations (FLUX)</strong>. Everything below is optional, just for extra capacity.</p>
+        <label class="field-label" for="geminiKey">Gemini fallback key <span class="muted">(optional, extra capacity when Pollinations is busy)</span></label>
         <input id="geminiKey" type="password" placeholder="paste a free Google AI Studio key" autocomplete="off" />
         <a class="link" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a free key → Google AI Studio</a>
         <label class="field-label" for="geminiModel">Gemini model</label>
         <select id="geminiModel"></select>
-        <p class="muted small">If a free Pollinations request is busy, AdForge automatically falls back to Gemini for the text steps (a separate free tier). Images are independent — always free via Pollinations.</p>
-        <label class="field-label" for="proxyBase">Proxy base <span class="muted">(optional — public Vercel demo)</span></label>
-        <input id="proxyBase" type="text" placeholder="e.g. /api — leave blank for direct keyless calls" autocomplete="off" />
+        <p class="muted small">If a free Pollinations request is busy, AdForge automatically falls back to Gemini for the text steps (a separate free tier). Images are independent, always free via Pollinations.</p>
+        <label class="field-label" for="proxyBase">Proxy base <span class="muted">(optional, public Vercel demo)</span></label>
+        <input id="proxyBase" type="text" placeholder="e.g. /api (leave blank for direct keyless calls)" autocomplete="off" />
         <p class="muted small">Pollinations is keyless, so no proxy is required. To offer the Gemini fallback to public visitors without their own key, deploy to Vercel, set <code>GEMINI_API_KEY</code>, and set this to <code>/api</code> (the <code>api/gemini.js</code> proxy holds the key server-side).</p>
-        <label class="field-label" for="renderUrl">HyperFrames render service <span class="muted">(optional — cinematic server video)</span></label>
+        <label class="field-label" for="renderUrl">HyperFrames render service <span class="muted">(optional, cinematic server video)</span></label>
         <input id="renderUrl" type="text" placeholder="e.g. https://adforge-render.up.railway.app" autocomplete="off" />
-        <p class="muted small">Leave blank to use the in-browser recorder. Paste your deployed <code>adforge-render</code> URL to unlock frame-accurate GSAP video via HyperFrames (see that repo's README to deploy in a few clicks).</p>
+        <p class="muted small">Leave blank to use the in-browser recorder. Paste your deployed <code>adforge-render</code> URL to get frame-accurate GSAP video via HyperFrames (see that repo's README to deploy in a few clicks).</p>
         <button id="saveSettings" class="primary-btn" type="button">Save</button>
       </div>
     </div>
@@ -182,14 +182,14 @@
       <div class="modal-body how">
         <p>AdForge runs a <strong>team of five AI agents</strong> in a pipeline, then loops a critic over the results:</p>
         <ol>
-          <li><strong>Strategist</strong> — turns your idea into a creative brief (angle, audience, message, mood, palette).</li>
-          <li><strong>Prompt Engineer</strong> — expands the brief into a strong master image prompt. Also powers <em>Improve prompt</em>.</li>
-          <li><strong>Art Director</strong> — splits the campaign into distinct scenes (hero, lifestyle, detail, CTA…).</li>
-          <li><strong>Copywriter</strong> — writes headline, subhead, body, CTA and a social caption per scene.</li>
-          <li><strong>Critic</strong> — scores each scene against the brief and proposes one concrete fix you can apply in a click.</li>
+          <li><strong>Strategist</strong>: turns your idea into a creative brief (angle, audience, message, mood, palette).</li>
+          <li><strong>Prompt Engineer</strong>: expands the brief into a strong master image prompt. Also powers <em>Improve prompt</em>.</li>
+          <li><strong>Art Director</strong>: splits the campaign into distinct scenes (hero, lifestyle, detail, CTA…).</li>
+          <li><strong>Copywriter</strong>: writes headline, subhead, body, CTA and a social caption per scene.</li>
+          <li><strong>Critic</strong>: scores each scene against the brief and proposes one concrete fix you can apply in a click.</li>
         </ol>
         <p>You can edit the <strong>master prompt</strong> (regenerates every scene) or any <strong>single scene's prompt</strong> (regenerates just that image), and rewrite copy or apply the critic's fix per scene.</p>
-        <p class="muted small">Stack: vanilla JS · free &amp; keyless — the writing agents run on Pollinations (with an optional Gemini fallback) and images render via Pollinations (FLUX, with a fast turbo fallback). No backend required (an optional Vercel proxy can hold a Gemini key for public visitors).</p>
+        <p class="muted small">Stack: vanilla JS · free &amp; keyless. The writing agents run on Pollinations (with an optional Gemini fallback) and images render via Pollinations (FLUX, with a fast turbo fallback). No backend required (an optional Vercel proxy can hold a Gemini key for public visitors).</p>
       </div>
     </div>
   </div>
